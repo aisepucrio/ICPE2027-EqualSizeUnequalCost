@@ -20,7 +20,7 @@ that produces it. Paths are relative to `artifacts/` unless stated otherwise.
 | `fse_posterior_synthesis/` | cross-corpus synthesis; Benjamini–Hochberg sensitivity | `scripts/build_fse_posterior_synthesis.py`, `scripts/mcc_sensitivity.py` |
 | `paper_tables/` | Tables 3–7 and the numbers quoted in the text | `scripts/make_paper_tables.py` |
 | `calibration/` | cost-to-size ratio per strategy and corpus | `scripts/make_calibration_table.py` |
-| `paper_figures/` | Figures 6–8 | `scripts/make_paper_figures.py` |
+| `paper_figures/` | Figures 1–8 | `scripts/make_paper_figures.py` |
 | `srs_audit_note.md` | audit of the SRS implementation | `scripts/audit_srs_vs_artifact.py` |
 
 Each corpus directory contains the same files: `posterior_strategy_summary.csv` (one row per
@@ -48,10 +48,10 @@ differs), FSE5 = H2 (SRS < random), FSE6 = H3 (cost of SRS and random differs).
 
 | Paper | Content | Source | Script |
 |---|---|---|---|
-| Figure 1 | posterior risk against cost share of every BerkeleyDB sample at N = 97 | `fse_posterior_fse_artifact_final_t2/posterior_records.csv` (context `BerkeleyDBC`; `pct_cost`, `posterior_risk`, `strategy`) | — |
-| Figure 2 | prior and posterior confidence per strategy, 7z, N = 600 | `posterior_confidence_curves.csv` written by the Kaltenecker run (not committed because of its size; rerun step 2 of the README) | — |
-| Figures 3, 4 | confidence discrepancy η per system and strategy | same file | — |
-| Figure 5 | ω/ω_max against N for SRS, uniform random and diversity-oriented sampling | `posterior_strategy_summary.csv` of each corpus (`omega_size_over_max`, `n`) | — |
+| Figure 1 | posterior risk against cost share of every BerkeleyDB sample at N = 97 | `fse_posterior_fse_artifact_final_t2/posterior_records.csv` (context `BerkeleyDBC`; `pct_cost`, `posterior_risk`, `strategy`) | `make_paper_figures.py` |
+| Figure 2 | prior and posterior confidence per strategy, 7z, N = 600 | per-sample posterior risks in `fse_posterior_fse_artifact_final_t2/posterior_records.csv`, with `cost_sampling.posterior` (identical to the `posterior_confidence_curves.csv` written by the Kaltenecker run) | `make_paper_figures.py` |
+| Figures 3, 4 | confidence discrepancy η per system and strategy | same | `make_paper_figures.py` |
+| Figure 5 | ω/ω_max against N for SRS, uniform random and diversity-oriented sampling | `posterior_strategy_summary.csv` of each corpus (`omega_size_over_max`, `n`) | `make_paper_figures.py` |
 | Figure 6 | size-based and cost-based frontier for BerkeleyDB and nginx | `fse_posterior_fse_artifact_final_t2/` and `fse_posterior_energy_final/posterior_strategy_summary.csv` | `make_paper_figures.py` |
 | Figure 7 | pilotCost against uniform random at equal expenditure | `fse_posterior_{energy,lcbench}_equal_spend/equal_spend_scope_summary.csv` | `make_paper_figures.py` |
 | Figure 8 | standing of SRS against N (H2, H5, equal expenditure) | hypothesis tests and strategy summaries of each corpus; equal-spend scope summaries | `make_paper_figures.py` |

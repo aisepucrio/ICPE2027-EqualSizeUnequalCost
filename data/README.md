@@ -67,6 +67,7 @@ unzip -q data.zip 'data/sampling/*/measurements.csv' \
 cd ../../..
 ```
 
+This extracts 3,507 files (7 measurement tables and 3,500 sample sets, about 160 MB).
 (`unzip -q data.zip` extracts everything and works as well.) The runner is then pointed at
 `--fse-root data/raw/fse_artifact/data`.
 
@@ -90,6 +91,8 @@ git clone --depth 1 https://github.com/jualvespereira/ICPE2020.git /tmp/ICPE2020
 python scripts/build_x264_allruns_zip.py /tmp/ICPE2020 data/raw/AllRuns.zip
 rm -rf /tmp/ICPE2020    # optional
 ```
+
+The script reports 61,200 sample files for 34 contexts (17 inputs × 2 properties).
 
 The loader reconstructs the measured configuration table from the sample sets themselves, so
 no further file is needed.

@@ -5,9 +5,8 @@ Conference on Performance Engineering (ICPE 2027). The paper is under double-bli
 the authors' names are withheld.
 
 The package contains the analysis code, the committed results from which every number of
-the paper is derived, scripts that regenerate the paper's tables and the data-dependent
-figures from these results, and a protocol to retrieve the six public corpora and rerun the
-complete study.
+the paper is derived, scripts that regenerate all tables and figures of the paper from these
+results, and a protocol to retrieve the six public corpora and rerun the complete study.
 
 ## About the study
 
@@ -78,7 +77,7 @@ scripts/
   audit_srs_vs_artifact.py             audit of our SRS implementation against the original one
   make_paper_tables.py                 Tables 3–7 of the paper
   make_calibration_table.py            cost-to-size ratio per strategy and corpus (Section 4.2)
-  make_paper_figures.py                Figures 6–8 of the paper
+  make_paper_figures.py                Figures 1–8 of the paper
   build_x264_allruns_zip.py            data preparation, x264 corpus
   convert_tuxkconfig_openml.py         data preparation, Linux corpus
   parallel/                            optional: split the long runs into independent jobs
@@ -110,7 +109,7 @@ in seconds.
 ```bash
 python scripts/make_paper_tables.py         # Tables 3-7       -> artifacts/paper_tables/
 python scripts/make_calibration_table.py    # ratio r per strategy and corpus -> artifacts/calibration/
-python scripts/make_paper_figures.py        # Figures 6-8      -> artifacts/paper_figures/
+python scripts/make_paper_figures.py        # Figures 1-8      -> artifacts/paper_figures/
 python scripts/mcc_sensitivity.py           # BH sensitivity   -> artifacts/fse_posterior_synthesis/
 python scripts/build_fse_posterior_synthesis.py   # cross-corpus synthesis
 python tests/test_pilot_cost_sample.py      # unit test
@@ -172,6 +171,11 @@ python scripts/run_fse_posterior_lcbench_batch.py --json data/raw/data_2k_lw.jso
   --output-dir $REPRO/fse_posterior_lcbench_no_oracles_final
 ```
 
+On a 10-core laptop, the Kaltenecker run takes about 10 seconds and the x264 run about
+1.5 minutes. In a single process, the Energy and Workload runs take about one and one and
+a half hours (roughly one minute per scenario or context) and LCBench about a quarter of an
+hour; see *Optional: parallel execution* below.
+
 **Linux.** The Linux corpus is the most demanding step. It is run one release at a time;
 the script skips releases that are already complete, so it can simply be restarted after an
 interruption. The parts are then merged:
@@ -183,7 +187,7 @@ python scripts/merge_linux_full_parts.py \
   --output-dir $REPRO/fse_posterior_linux_all_full
 ```
 
-Each release uses budgets of 1%, 2% and 5% of the pool, 100 runs of the stochastic
+Each Linux release uses budgets of 1%, 2% and 5% of the pool, 100 runs of the stochastic
 strategies, 20 runs of the diversity, uncertainty and coverage samplers, and 100 SRS seeds.
 Set `PYTHON` to choose the interpreter used by the shell script.
 
@@ -200,7 +204,8 @@ python scripts/run_lcbench_equal_spend.py --json data/raw/data_2k_lw.json --data
   --output-dir $REPRO/fse_posterior_lcbench_equal_spend
 ```
 
-Both scripts save one checkpoint per system or dataset (`parts/`) and resume from them.
+Both scripts save one checkpoint per system or dataset (`parts/`) and resume from them. Each
+Energy system takes about four minutes and each LCBench dataset about three.
 
 ### 4. Rebuild the synthesis, tables and figures
 
@@ -276,7 +281,10 @@ quoted in the paper, the result file it comes from and the script that produces 
 ## Notes on reproducibility
 
 - All sampling is seeded, and a regeneration with the pinned environment reproduces the
-  committed results.
+  committed results. The data protocol has been executed end to end from the original
+  archives: the published checksums match, and the Kaltenecker and x264 runs as well as
+  sample jobs of every other family (Energy, Workload, LCBench, equal expenditure) reproduce
+  the committed results exactly.
 - At small budgets (N ≤ 32), SRS performs at most one recursion step, and SRS and uniform
   random sampling can reach exactly the same median posterior risk. Whether `<` holds for
   such a tie can depend on floating-point rounding, which differs across machines. Two counts

@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Paper figures built from the committed artifacts.
+"""Figures 1-8 of the paper, built from the committed artifacts.
 
-Builds, from the committed artifacts:
-  fig_rq2_equal_spend.pdf       pilotCost vs uniform random at equal measured spend
-  fig_rq2_frontier_anatomy.pdf  size- vs cost-indexed Pareto frontier (BerkeleyDB, nginx)
-  fig_rq3_srs_budget.pdf        standing of SRS against the sample size (H2, H5, equal spend)
+  Figure 1  fig_intro_berkeleydb.pdf        posterior risk against cost share, BerkeleyDB samples
+  Figure 2  fig_rq1_confidence_7z.pdf       prior and posterior confidence per strategy, 7z
+  Figure 3  fig_rq1_discrepancy_small.pdf   confidence discrepancy per system over small risks
+  Figure 4  fig_rq1_discrepancy_solver.pdf  confidence discrepancy of plain solver sampling
+  Figure 5  fig_rq1_omega_budget.pdf        omega / omega_max against the sample size
+  Figure 6  fig_rq2_frontier_anatomy.pdf    size- vs cost-based Pareto frontier (BerkeleyDB, nginx)
+  Figure 7  fig_rq2_equal_spend.pdf         pilotCost vs uniform random at equal expenditure
+  Figure 8  fig_rq3_srs_budget.pdf          standing of SRS against the sample size
 
-The figure numbers refer to the paper: Figure 6 (frontier anatomy), Figure 7 (equal
-expenditure) and Figure 8 (standing of SRS against the sample size).
+Figures 1-4 are computed from the per-sample posterior risks of the Kaltenecker corpus
+(posterior_records.csv) with the confidence functions of `cost_sampling.posterior`.
 
 Usage:
   python scripts/make_paper_figures.py [--artifacts DIR] [--out DIR] [--png]
@@ -15,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -28,6 +33,8 @@ from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import FixedLocator, FuncFormatter  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+from cost_sampling.posterior import posterior_confidence, prior_confidence  # noqa: E402
 
 # Palette and style of the paper figures.
 INK = "#52514e"
@@ -318,10 +325,224 @@ def fig_srs_budget(artifacts: Path) -> plt.Figure:
     return fig
 
 
-FIGURES = {
-    "fig_rq2_equal_spend": fig_equal_spend,
-    "fig_rq2_frontier_anatomy": fig_frontier_anatomy,
-    "fig_rq3_srs_budget": fig_srs_budget,
+# --------------------------------------------------------------------------- Figures 1-5
+KALTENECKER_SYSTEMS = ["7z", "BerkeleyDBC", "Dune", "Hipacc", "JavaGC", "LLVM", "Polly"]
+SYSTEM_LABELS = {"BerkeleyDBC": "BerkeleyDB", "Hipacc": "HIPAcc"}
+RQ1_STRATEGIES = [("random", "Uniform random", BLUE), ("divDistBased", "Distance-based", GREEN),
+                  ("solverBased", "Solver-based", PURPLE), ("SRSSampling", "SRS", ORANGE)]
+
+
+def minus(value, _pos=None) -> str:
+    return f"{value:.1f}".replace("-", "−")
+
+
+def kaltenecker_records(artifacts: Path) -> pd.DataFrame:
+    return pd.read_csv(artifacts / DIRS["Kaltenecker"] / "posterior_records.csv")
+
+
+def confidence_curves(records: pd.DataFrame, context: str, strategy: str, eps: np.ndarray):
+    """Posterior and prior confidence as in the pipeline: the prior uses the median sample size
+    of the strategy's samples and the artifact-compatible exponent N + 1."""
+    rows = records[(records.context == context) & (records.strategy == strategy)]
+    risks = rows.posterior_risk.to_numpy()
+    n = float(np.median(rows.n))
+    return posterior_confidence(eps, risks), prior_confidence(eps, n, exponent_offset=1), risks
+
+
+def two_wise(records: pd.DataFrame, context: str) -> tuple[float, int]:
+    """Posterior risk of the deterministic 2-wise sample and the nominal sample size N_2-wise
+    (the size of the uniform random samples; de-duplication can shorten other samples)."""
+    rows = records[(records.context == context) & (records.strategy == "twise")]
+    random = records[(records.context == context) & (records.strategy == "random")]
+    return float(rows.posterior_risk.median()), int(np.median(random.n))
+
+
+def curve_end(risks: np.ndarray, n: float, tolerance: float = 1e-3) -> float:
+    """Risk up to which a discrepancy curve is drawn: past the largest observed risk, until the
+    prior confidence reaches 1 - tolerance (beyond it, |eta| < tolerance)."""
+    return max(float(risks.max()), 1.0 - tolerance ** (1.0 / (n + 1.0)))
+
+
+def fig_intro_berkeleydb(artifacts: Path) -> plt.Figure:
+    """Figure 1: posterior risk against cost share of every BerkeleyDB sample at N = N_2-wise."""
+    rec = kaltenecker_records(artifacts)
+    rec = rec[rec.context == "BerkeleyDBC"].assign(cost=lambda d: 100 * d.pct_cost,
+                                                   risk=lambda d: 100 * d.posterior_risk)
+    size_share = 100 * float(rec.pct_n.median())
+    n = int(rec[rec.strategy == "random"].n.median())
+    style = {"axes.edgecolor": "black", "xtick.color": "black", "ytick.color": "black",
+             "axes.grid.axis": "both", "xtick.labelsize": 7.5, "ytick.labelsize": 7.5}
+    with plt.rc_context(style):
+        fig, ax = plt.subplots(figsize=(3.35, 2.45))
+        fig.subplots_adjust(left=0.135, right=0.985, bottom=0.165, top=0.83)
+        order = [("solverBased", "Solver-based", "s"), ("divDistBased", "Distance-based", "^"),
+                 ("random", "Uniform random", "o"), ("SRSSampling", "SRS", "D")]
+        colours = {key: STRATEGY_STYLE[key][2] for key, _, _ in order}
+        handles = {}
+        for key, label, marker in order:
+            d = rec[rec.strategy == key]
+            ax.scatter(d.cost, d.risk, s=9, marker=marker, color=colours[key], alpha=0.6,
+                       edgecolors="white", linewidths=0.3, zorder=3)
+            handles[key] = Line2D([], [], marker=marker, linestyle="none", markersize=3.2, color=colours[key],
+                                  alpha=0.6, label=label)
+        tw = rec[rec.strategy == "twise"].iloc[0]
+        ax.scatter([tw.cost], [tw.risk], s=42, marker="X", color="black", edgecolors="white", linewidths=0.4,
+                   zorder=4)
+        handles["twise"] = Line2D([], [], marker="X", linestyle="none", markersize=6, color="black", label="2-wise")
+        ax.axvline(size_share, color="#333333", linestyle="--", linewidth=0.8, zorder=2)
+        ax.text(size_share * 1.06, 52, f"size share ({size_share:.1f}%):\nevery sample has\n{n} configurations",
+                fontsize=6, va="top", ha="left", color="#222222")
+        ax.text(0.52, 2.3, "2-wise: deterministic,\nalways the same sample", fontsize=6, va="top", ha="left",
+                color="#222222")
+        ax.annotate("", xy=(0.52, 0.042), xytext=(size_share * 0.95, 0.042),
+                    arrowprops=dict(arrowstyle="->", color=INK, linewidth=0.6))
+        ax.text(0.58, 0.05, "cheaper than its size", fontsize=6, va="bottom", ha="left", color=INK)
+        ax.set_xscale("log", base=2)
+        ax.set_xlim(0.44, 20)
+        ax.xaxis.set_major_locator(FixedLocator([0.5, 1, 2, 4, 8, 16]))
+        ax.xaxis.set_major_formatter(FuncFormatter(plain))
+        ax.xaxis.set_minor_locator(FixedLocator([]))
+        ax.set_yscale("symlog", linthresh=0.1, linscale=0.625)
+        ax.set_ylim(-0.012, 80)
+        ax.yaxis.set_major_locator(FixedLocator([0, 0.1, 1, 10, 50]))
+        ax.yaxis.set_major_formatter(FuncFormatter(plain))
+        ax.yaxis.set_minor_locator(FixedLocator([]))
+        ax.grid(color=GRID, linewidth=0.35)
+        ax.set_xlabel("Cost share of the sample (% of total cost)")
+        ax.set_ylabel("Posterior risk (%)")
+        legend_order = ["solverBased", "twise", "divDistBased", "random", "SRSSampling"]
+        fig.legend(handles=[handles[k] for k in legend_order], loc="upper center", bbox_to_anchor=(0.56, 1.0),
+                   ncol=3, frameon=False, fontsize=6, handletextpad=0.4, columnspacing=1.4)
+    fig.fixed_size = True
+    return fig
+
+
+def fig_confidence_7z(artifacts: Path) -> plt.Figure:
+    """Figure 2: prior and posterior confidence per strategy for 7z at N = N_2-wise."""
+    rec = kaltenecker_records(artifacts)
+    eps = np.linspace(0.0, 0.008, 4001)
+    fig, axes = plt.subplots(1, 4, figsize=(6.31, 1.28), sharey=True, gridspec_kw={"wspace": 0.25})
+    for ax, (key, label, colour) in zip(axes, RQ1_STRATEGIES):
+        post, prior, _ = confidence_curves(rec, "7z", key, eps)
+        ax.fill_between(eps, post, step="post", color=colour, alpha=0.28, linewidth=0)
+        ax.plot(eps, post, drawstyle="steps-post", color=colour, linewidth=1.2, label=r"posterior $\hat{\gamma}$")
+        ax.plot(eps, prior, color="black", linestyle="--", linewidth=1.0, label=r"prior $\gamma$")
+        ax.set_title(label)
+        ax.set_xlim(0, 0.008)
+        ax.set_ylim(0, 1.01)
+        ax.set_xticks([0, 0.004, 0.008], ["0", "0.004", "0.008"])
+        ax.set_yticks([0, 0.5, 1.0])
+        ax.yaxis.set_major_formatter(FuncFormatter(minus))
+        ax.set_xlabel(r"Risk $\varepsilon$")
+    axes[0].set_ylabel("Confidence")
+    axes[0].legend(loc="lower right", bbox_to_anchor=(1.0, 0.08), frameon=False, fontsize=7, handlelength=2.0)
+    return fig
+
+
+def fig_discrepancy_small(artifacts: Path) -> plt.Figure:
+    """Figure 3: confidence discrepancy per system and strategy over small risks."""
+    rec = kaltenecker_records(artifacts)
+    eps = np.logspace(-4, -1, 3000)
+    fig, axes = plt.subplots(2, 4, figsize=(6.0, 2.94), sharey=True, gridspec_kw={"hspace": 0.62, "wspace": 0.26})
+    flat = axes.ravel()
+    for i, (ax, ctx) in enumerate(zip(flat, KALTENECKER_SYSTEMS)):
+        risk_2wise, n = two_wise(rec, ctx)
+        ax.axhline(0, color=INK, linewidth=0.8, zorder=1)
+        for key, _, colour in RQ1_STRATEGIES:
+            post, prior, risks = confidence_curves(rec, ctx, key, eps)
+            n_strategy = float(np.median(rec[(rec.context == ctx) & (rec.strategy == key)].n))
+            keep = eps <= curve_end(risks, n_strategy)
+            ax.plot(eps[keep], (post - prior)[keep], color=colour, linewidth=1.1, drawstyle="steps-post", zorder=3)
+        ax.axvline(risk_2wise, color="black", linestyle=":", linewidth=0.8, zorder=2)
+        ax.set_xscale("log")
+        ax.set_xlim(1e-4, 1e-1)
+        ax.set_ylim(-1.0, 1.0)
+        ax.set_yticks([-1, -0.5, 0, 0.5, 1])
+        ax.yaxis.set_major_formatter(FuncFormatter(minus))
+        ax.xaxis.set_major_locator(FixedLocator([1e-4, 1e-3, 1e-2, 1e-1]))
+        ax.xaxis.set_minor_locator(FixedLocator([]))
+        ax.set_title(f"{SYSTEM_LABELS.get(ctx, ctx)}, $N$={n}")
+        bottom = i >= 4 or i == 3
+        ax.tick_params(axis="x", labelbottom=bottom)
+        if bottom:
+            ax.set_xlabel(r"Risk $\varepsilon$")
+        if i % 4 == 0:
+            ax.set_ylabel(r"$\eta=\hat{\gamma}-\gamma$")
+    legend_ax = flat[7]
+    legend_ax.axis("off")
+    handles = [Line2D([], [], color=c, linewidth=1.1, label=l) for _, l, c in RQ1_STRATEGIES]
+    handles.append(Line2D([], [], color="black", linestyle=":", linewidth=0.8,
+                          label=r"$\hat{\varepsilon}_{\mathrm{2\text{-}wise}}$"))
+    legend_ax.legend(handles=handles, loc="center left", frameon=False, fontsize=7, handlelength=2.0)
+    return fig
+
+
+def fig_discrepancy_solver(artifacts: Path) -> plt.Figure:
+    """Figure 4: confidence discrepancy of plain solver sampling over the risk range [0, 0.65]."""
+    rec = kaltenecker_records(artifacts)
+    eps = np.linspace(0.0, 0.65, 6501)
+    fig, axes = plt.subplots(1, 7, figsize=(6.3, 1.06), sharey=True, gridspec_kw={"wspace": 0.25})
+    for ax, ctx in zip(axes, KALTENECKER_SYSTEMS):
+        post, prior, _ = confidence_curves(rec, ctx, "solverBased", eps)
+        ax.axhline(0, color=INK, linewidth=0.8, zorder=1)
+        ax.plot(eps, post - prior, color=PURPLE, linewidth=1.1, drawstyle="steps-post", zorder=3)
+        ax.set_title(SYSTEM_LABELS.get(ctx, ctx))
+        ax.set_xlim(0, 0.65)
+        ax.set_ylim(-1.0, 1.0)
+        ax.set_xticks([0, 0.3, 0.6])
+        ax.xaxis.set_major_formatter(FuncFormatter(minus))
+        ax.set_yticks([-1, 0, 1])
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}".replace("-", "−")))
+    axes[0].set_ylabel(r"$\eta$ (solver-based)")
+    fig.supxlabel(r"Risk $\varepsilon$", fontsize=7.5, y=-0.2)
+    return fig
+
+
+def fig_omega_budget(artifacts: Path) -> plt.Figure:
+    """Figure 5: omega / omega_max against the sample size, median over the contexts of a corpus."""
+    panels = [("SRSSampling", "SRS"), ("random", "Uniform random"), ("diversity", "Distance-based / Diversity")]
+    fig, axes = plt.subplots(1, 3, figsize=(6.33, 2.11), sharex=True, sharey=True, gridspec_kw={"wspace": 0.12})
+    for ax, (key, title) in zip(axes, panels):
+        for corpus in DIRS:
+            s = strategy_summary(artifacts, corpus)
+            levels = scope_levels(s, corpus)
+            strategy = "divDistBased" if key == "diversity" and corpus in ("Kaltenecker", "x264") else key
+            rows = s[s.strategy == strategy].merge(levels, on=["context", "level"])
+            table = rows.groupby("tier").agg(N=("N", "median"), omega=("omega_size_over_max", "median")).sort_values("N")
+            marker, colour = CORPUS_STYLE[corpus]
+            ax.plot(table.N, table.omega, marker=marker, color=colour, linewidth=1.3, markersize=4.5,
+                    markeredgecolor="white", markeredgewidth=0.5, linestyle="none" if len(table) == 1 else "-",
+                    zorder=3)
+        ax.axhline(0, color=INK, linewidth=0.8, zorder=1)
+        ax.set_title(title)
+        ax.set_xscale("log")
+        ax.set_xlim(6, 2800)
+        ax.axvspan(1, SRS_BATCH, color=SHADE, linewidth=0, zorder=0)
+        ax.xaxis.set_major_locator(FixedLocator([10, 100, 1000]))
+        ax.xaxis.set_major_formatter(FuncFormatter(plain))
+        ax.xaxis.set_minor_locator(FixedLocator([]))
+        ax.set_xlabel("Sample size $N$")
+        ax.set_ylim(-1.05, 1.05)
+        ax.set_yticks([-1, -0.5, 0, 0.5, 1])
+        ax.yaxis.set_major_formatter(FuncFormatter(minus))
+    axes[0].set_ylabel(r"$\omega/\omega_{\max}$ (median over contexts)")
+    handles = [Line2D([], [], marker=m, color=c, linewidth=1.3, markersize=4.5, markeredgecolor="white",
+                      markeredgewidth=0.5, linestyle="none" if corpus == "Kaltenecker" else "-", label=corpus)
+               for corpus, (m, c) in CORPUS_STYLE.items()]
+    fig.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=6, frameon=False,
+               columnspacing=1.4, handlelength=2.0)
+    return fig
+
+
+FIGURES = {  # file name (as in the paper sources): builder
+    "fig_intro_berkeleydb": fig_intro_berkeleydb,          # Figure 1
+    "fig_rq1_confidence_7z": fig_confidence_7z,            # Figure 2
+    "fig_rq1_discrepancy_small": fig_discrepancy_small,    # Figure 3
+    "fig_rq1_discrepancy_solver": fig_discrepancy_solver,  # Figure 4
+    "fig_rq1_omega_budget": fig_omega_budget,              # Figure 5
+    "fig_rq2_frontier_anatomy": fig_frontier_anatomy,      # Figure 6
+    "fig_rq2_equal_spend": fig_equal_spend,                # Figure 7
+    "fig_rq3_srs_budget": fig_srs_budget,                  # Figure 8
 }
 
 
@@ -335,9 +556,10 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     for name, build in FIGURES.items():
         fig = build(args.artifacts)
-        fig.savefig(args.out / f"{name}.pdf", metadata={"CreationDate": None})
+        bbox = fig.bbox_inches if getattr(fig, "fixed_size", False) else "tight"  # Figure 1 keeps its exact size
+        fig.savefig(args.out / f"{name}.pdf", metadata={"CreationDate": None}, bbox_inches=bbox)
         if args.png:
-            fig.savefig(args.out / f"{name}.png", dpi=300)
+            fig.savefig(args.out / f"{name}.png", dpi=300, bbox_inches=bbox)
         plt.close(fig)
         print(f"wrote {args.out / name}.pdf")
 
