@@ -1,0 +1,11 @@
+# Raw data (see data/README.md) and regenerated results
+data/raw/
+artifacts/_repro/
+artifacts/fse_posterior_linux_full_parts/
+
+# Python and editor noise
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store

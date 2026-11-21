@@ -1,0 +1,8 @@
+Corpus,Scopes,H3 cost differs,H4 top changes,H5 SRS best,H6 frontier changes,SRS on fr.,Jacc.
+Kaltenecker,7,7,2,3,6,6,0.25
+x264,34,32,2,26,30,29,0.25
+Energy,220,94 (90),30,9,220,77,0.25
+Workload,359,149 (146),57,31,346,138,0.33
+Linux,21,21,0,0,21,19,0.20
+LCBench,210,10 (1),109,0,205,19,0.33
+Total,851,313,200,69,828,288,0.33

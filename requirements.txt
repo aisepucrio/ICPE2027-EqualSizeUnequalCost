@@ -1,0 +1,9 @@
+# Environment used to produce and check the committed results (CPython 3.13/3.14).
+numpy==2.5.4
+pandas==3.1.1
+scipy==1.18.1
+matplotlib==3.11.2
+# Linux corpus only
+pyarrow==26.0.1
+scikit-learn==1.9.1
+# Linux data preparation only (scripts/convert_tuxkconfig_openml.py): pip install openml

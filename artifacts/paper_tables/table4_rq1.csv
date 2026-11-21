@@ -1,0 +1,7 @@
+Corpus,Scopes,H1 risk differs,H2 SRS < random,Mean rank SRS,Mean rank Solver,Monotone all,Monotone SRS
+Kaltenecker,7,7,6,1.6/5,3.7/5,--,--
+x264,34,34,34,1.2/7,6.1/7,100%,100%
+Energy,220,206,52 (42),2.9/6,--,86%,100%
+Workload,359,325 (324),84 (70),2.8/6,--,85%,100%
+Linux,21,21,5 (1),2.2/6,--,98%,100%
+LCBench,210,120 (101),0,4.0/6,--,65%,49%

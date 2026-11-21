@@ -1,0 +1,37 @@
+corpus,strategy,scopes,median,p10,p90
+Kaltenecker,Uniform random,7,1.0009,0.9959,1.0056
+x264,Uniform random,34,1.0015,0.9986,1.0033
+Energy,Uniform random,220,0.9942,0.8535,1.0090
+Workload,Uniform random,359,0.9976,0.9499,1.0127
+Linux,Uniform random,21,0.9973,0.9884,1.0044
+LCBench,Uniform random,210,0.9623,0.8981,1.0228
+Kaltenecker,SRS,7,1.0965,1.0301,2.2745
+x264,SRS,34,1.1405,0.9664,1.2505
+Energy,SRS,220,1.0114,0.8516,1.2860
+Workload,SRS,359,1.0065,0.9291,1.4168
+Linux,SRS,21,1.0514,1.0184,1.1309
+LCBench,SRS,210,0.9680,0.8941,1.0294
+Kaltenecker,Distance-based,7,0.9931,0.9328,1.0656
+x264,Distance-based,34,1.0290,1.0128,1.0436
+x264,Distance-based (plain),34,1.0229,0.9957,1.0475
+x264,Randomized solver,34,0.7517,0.7185,0.8057
+Kaltenecker,Solver-based,7,0.9767,0.5251,1.0543
+x264,Solver-based,34,0.9818,0.9297,1.0224
+Kaltenecker,2-wise,7,0.7189,0.4895,0.9489
+x264,2-wise,34,1.1022,1.0202,1.1560
+Energy,Diversity,220,0.9993,0.8208,1.7103
+Workload,Diversity,359,1.0071,0.7555,1.2682
+Linux,Diversity,19,2.1302,1.8755,2.3394
+LCBench,Diversity,210,1.2320,0.9616,1.4782
+Energy,Balanced,220,1.0006,0.9368,1.0703
+Workload,Balanced,359,0.9995,0.9546,1.0748
+Linux,Balanced,21,0.9998,0.9944,1.0048
+LCBench,Balanced,210,0.8180,0.6589,1.0273
+Energy,Pairwise,220,0.9930,0.7647,1.4318
+Workload,Pairwise,359,1.0000,0.8798,1.1425
+LCBench,Pairwise,210,0.9385,0.8487,1.0504
+Energy,pilotCost,220,0.7099,0.2926,0.9593
+Workload,pilotCost,359,0.8332,0.5083,0.9818
+LCBench,pilotCost,210,0.6541,0.5059,0.7873
+Linux,Coverage,21,0.9992,0.9789,1.0103
+Linux,Uncertainty,21,0.8905,0.7314,1.1114
